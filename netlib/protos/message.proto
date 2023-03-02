@@ -1,0 +1,34 @@
+syntax = "proto3";
+package message;
+
+enum MessageType {
+  PING = 0;
+  TEXT = 1;
+  IMAGE = 2;
+}
+
+message MessageHeader {
+  MessageType type = 1;
+  int32 length = 2;
+}
+
+message Message{
+  MessageHeader header = 1;
+  oneof messageType {
+      PingMessage ping = 2;
+      TextMessage text = 3;
+      ImageMessage image = 4;
+  }
+}
+
+message PingMessage {
+  string payload = 2;
+}
+
+message TextMessage {
+  string text = 2;
+}
+
+message ImageMessage {
+  bytes image = 2;
+}
