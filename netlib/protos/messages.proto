@@ -1,8 +1,8 @@
 syntax = "proto3";
-package message;
+package messages;
 
 enum MessageType {
-  PING = 0;
+  AUTH = 0;
   TEXT = 1;
   IMAGE = 2;
 }
@@ -15,14 +15,14 @@ message MessageHeader {
 message Message{
   MessageHeader header = 1;
   oneof messageType {
-      PingMessage ping = 2;
+      AuthMessage auth = 2;
       TextMessage text = 3;
       ImageMessage image = 4;
   }
 }
 
-message PingMessage {
-  string payload = 2;
+message AuthMessage {
+  string name = 2;
 }
 
 message TextMessage {
@@ -30,5 +30,5 @@ message TextMessage {
 }
 
 message ImageMessage {
-  bytes image = 2;
+  repeated int32 image = 2;
 }

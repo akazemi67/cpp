@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 20)
 find_package(Protobuf REQUIRED)
 
 set(PROTO_FILES
-        protos/message.proto
+        protos/messages.proto
         )
 
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROTO_FILES})
