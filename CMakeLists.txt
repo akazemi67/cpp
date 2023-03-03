@@ -8,6 +8,7 @@ find_package(Qt6 COMPONENTS
          Widgets
          REQUIRED)
 
+add_subdirectory(logging)
 add_subdirectory(inetui)
 add_subdirectory(netlib)
 add_subdirectory(ui/graphical)

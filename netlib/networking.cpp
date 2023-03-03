@@ -10,6 +10,7 @@
 #include "MessageTypes.h"
 #include "UiNetlibInterfaces.h"
 #include "messages.pb.h"
+#include "logging.h"
 
 #define MSG_HEADER_PADD 1000000000
 #define MSG_HEADER_LEN  8
@@ -48,11 +49,11 @@ int NetworkCom::getClientSocket(const std::string &peerName) {
 }
 
 void NetworkCom::startListening() {
-    printf("Creating local socket on: %d\n",localPort);
+    logger->info("Creating local socket on: {}",localPort);
 
     localSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (localSocket < 0) {
-        perror("socket() failed");
+        logger->error("socket creation on {} failed. errno: {}", localPort, errno);
         exit(EXIT_FAILURE);
     }
 
@@ -63,38 +64,28 @@ void NetworkCom::startListening() {
     addr.sin_addr.s_addr = INADDR_ANY;
 
     if (bind(localSocket, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        perror("bind() failed");
+        logger->error("Failed to bind for socker on {}. errno: {}", localPort, errno);
         exit(EXIT_FAILURE);
     }
 
     if (listen(localSocket, SOMAXCONN) < 0) {
-        perror("listen() failed");
+        logger->error("Failed to listen on {}. errno: {}", localPort, errno);
         exit(EXIT_FAILURE);
     }
 
     isListening = true;
-    printf("Waiting for connections on: %d\n", localPort);
+    logger->info("Waiting for connections on: {}", localPort);
     while(true) {
         struct sockaddr_in client_addr{};
         socklen_t client_addr_len = sizeof(client_addr);
         int client_sockfd = accept(localSocket, (struct sockaddr *) &client_addr, &client_addr_len);
         if (client_sockfd < 0) {
-            perror("accept() failed");
+            logger->error("accept() failed on {}. errno: {}", localPort, errno);
             continue;
         }
         new std::thread([this, client_sockfd](){ this->handleConnections(client_sockfd);});
     }
 }
-
-/*template<typename T>
-std::unique_ptr<T> NetworkCom::deserializeMessage(const std::unique_ptr<uint8_t> &buffer,
-                                                                       size_t size) {
-    google::protobuf::io::ArrayInputStream input_stream(buffer.get(), size);
-    std::unique_ptr<T> msg(new T);
-    google::protobuf::util::ParseDelimitedFromZeroCopyStream(msg.get(),
-                                                             &input_stream, nullptr);
-    return msg;
-}*/
 
 std::tuple< std::unique_ptr<std::vector<uint8_t>>, int> NetworkCom::serializeMessage(const Message &message) {
     std::unique_ptr<messages::MessageHeader> headerProto(new messages::MessageHeader);
@@ -146,15 +137,13 @@ std::tuple< std::unique_ptr<std::vector<uint8_t>>, int> NetworkCom::serializeMes
 
     std::unique_ptr<std::vector<uint8_t>> messageBuffer(new std::vector<uint8_t>(bufferLen));
     headerProto->SerializeToArray(messageBuffer->data(), headerSize);
-    printf("Serialize. headerLen: %d, totalLen: %d\n", headerSize, bufferLen);
+    logger->info("Serializing message with body size: {}", bodySize);
 
     std::copy(bodyBuffer->data(), bodyBuffer->data()+bufferLen, messageBuffer->data()+headerSize);
     return {std::move(messageBuffer), bufferLen};
 }
 
 MessageHeader NetworkCom::getMessageHeader(std::unique_ptr<uint8_t> headerBuff) {
-    //auto header = deserializeMessage<messages::MessageHeader>(headerBuff,
-    //                                               MSG_HEADER_LEN);
     std::unique_ptr<messages::MessageHeader> header(new messages::MessageHeader());
     header->ParseFromArray(headerBuff.get(), MSG_HEADER_LEN);
     MessageHeader msgHeader{};
@@ -179,7 +168,6 @@ void NetworkCom::deserializeHandleMessage(int clientSocket, std::unique_ptr<uint
     //TODO: do it in a more general way!
     switch (header.type) {
         case MessageType::AUTH: {
-            //auto authMsgProto = deserializeMessage<messages::AuthMessage>(messageBuff,bufferSize);
             std::unique_ptr<messages::AuthMessage> authMsgProto(new messages::AuthMessage());
             authMsgProto->ParseFromArray(messageBuff.get(), bufferSize);
             std::unique_ptr<AuthMessage> authMessage(new AuthMessage(authMsgProto->name()));
@@ -188,7 +176,6 @@ void NetworkCom::deserializeHandleMessage(int clientSocket, std::unique_ptr<uint
             break;
         }
         case MessageType::TEXT: {
-            //auto textMsgProto = deserializeMessage<messages::TextMessage>(messageBuff,bufferSize);
             std::unique_ptr<messages::TextMessage> textMsgProto(new messages::TextMessage());
             textMsgProto->ParseFromArray(messageBuff.get(), bufferSize);
             std::unique_ptr<TextMessage> textMessage(new TextMessage(textMsgProto->text()));
@@ -196,7 +183,6 @@ void NetworkCom::deserializeHandleMessage(int clientSocket, std::unique_ptr<uint
             break;
         }
         case MessageType::IMAGE: {
-            //auto imgMsgProto = deserializeMessage<messages::ImageMessage>(messageBuff,bufferSize);
             std::unique_ptr<messages::ImageMessage> imgMsgProto(new messages::ImageMessage());
             imgMsgProto->ParseFromArray(messageBuff.get(), bufferSize);
             std::unique_ptr<ImageMessage> imageMessage(new ImageMessage(imgMsgProto->image()));
@@ -213,12 +199,13 @@ void NetworkCom::handleConnections(int clientSocket) {
         std::unique_ptr<uint8_t> headerBuff(new uint8_t[headerSize]);
         ssize_t bytesReceived = recv(clientSocket, headerBuff.get(), headerSize, 0);
         if(bytesReceived<=0) {
-            printf("Error in getting message header!\n");
+            logger->error("Error in receiving message header. errno: {}", errno);
             return;
         }
-        printf("Received a message!\n");
+
         MessageHeader msgHeader = getMessageHeader(std::move(headerBuff));
         size_t msgBodySize = msgHeader.length - headerSize;
+        logger->info("Received a message with body size: {}", msgBodySize);
         std::unique_ptr<uint8_t> messageBuffer(new uint8_t[msgBodySize]);
         size_t totalBytesReceived = 0;
 
@@ -226,7 +213,7 @@ void NetworkCom::handleConnections(int clientSocket) {
             bytesReceived = recv(clientSocket, messageBuffer.get() + totalBytesReceived,
                                  msgBodySize - totalBytesReceived, 0);
             if (bytesReceived <= 0) {
-                printf("Error getting message body!");
+                logger->error("Error getting message body! errno: {}", errno);
                 return;
             }
             totalBytesReceived += bytesReceived;
@@ -237,20 +224,18 @@ void NetworkCom::handleConnections(int clientSocket) {
 }
 
 void NetworkCom::sendMessage(const Peer& peer, const Message& message) {
-    printf("Getting socket data...\n");
     int clientSocket = getClientSocket(peer.name);
     if(clientSocket<0){
-        printf("Invalid peer name!\n");
+        logger->warn("Invalid peer with name: {}", peer.name);
         return;
     }
-    printf("Serializing data...\n");
+
     auto [messageBytes, len] = serializeMessage(message);
-    printf("Sending data...\n");
+    logger->info("Sending {} bytes of data to peer: {}", len, peer.name);
     send(clientSocket, messageBytes->data(), len, 0);
 }
 
 void NetworkCom::connectPeer(const Peer& peer) {
-    printf("Connecting peer!\n");
     struct hostent* host = gethostbyname(peer.IPv4.c_str());
     sockaddr_in sockAddr{};
     std::memset(&sockAddr, 0, sizeof(sockAddr));
@@ -261,11 +246,11 @@ void NetworkCom::connectPeer(const Peer& peer) {
     int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
     int status = connect(clientSocket, (sockaddr*) &sockAddr, sizeof(sockAddr));
     if(status < 0){
-        printf("Error connecting to socket!");
+        logger->warn("Cannot connect to {} on port {}", peer.IPv4, peer.port);
         return;
     }
 
-    printf("Peer connected!\n");
+    logger->info("Successfully connected to peer {} on {}:{}", peer.name, peer.IPv4, peer.port);
     addNewSocket(peer.name, clientSocket);
 }
 
