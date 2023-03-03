@@ -12,23 +12,14 @@ message MessageHeader {
   int32 length = 2;
 }
 
-message Message{
-  MessageHeader header = 1;
-  oneof messageType {
-      AuthMessage auth = 2;
-      TextMessage text = 3;
-      ImageMessage image = 4;
-  }
-}
-
 message AuthMessage {
-  string name = 2;
+  string name = 1;
 }
 
 message TextMessage {
-  string text = 2;
+  string text = 1;
 }
 
 message ImageMessage {
-  repeated int32 image = 2;
+  repeated int32 image = 1;
 }

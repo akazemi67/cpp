@@ -25,20 +25,24 @@ struct Message {
 
     Message() = default;
     explicit Message(MessageType type) : header(type) {}
+    virtual ~Message() = default;
 };
 
 struct AuthMessage : Message {
     std::string name;
+    AuthMessage() = default;
     explicit AuthMessage(const std::string &_name) : Message(MessageType::AUTH), name(_name) {}
 };
 
 struct TextMessage : Message {
     std::string text;
+    TextMessage() = default;
     explicit TextMessage(const std::string &_text) : Message(MessageType::TEXT), text(_text) {}
 };
 
 struct ImageMessage : Message {
     std::vector<uint8_t> image;
+    ImageMessage() = default;
     explicit ImageMessage(const google::protobuf::RepeatedField<int> &_image) :
                             Message(MessageType::IMAGE), image(_image.begin(), _image.end()) {}
 };

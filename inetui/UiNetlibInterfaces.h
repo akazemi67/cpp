@@ -19,15 +19,16 @@ struct Peer{
     }
 };
 
-class UiCallbacks{
+class UiCallbacks {
 public:
     virtual void newAuthMessage(std::unique_ptr<AuthMessage>)=0;
     virtual void newTextMessage(std::unique_ptr<TextMessage>)=0;
     virtual void newImageMessage(std::unique_ptr<ImageMessage>)=0;
     virtual void peerDisconnect(const Peer&)=0;
+    virtual ~UiCallbacks()=default;
 };
 
-class NetOps{
+class NetOps {
 public:
     virtual void sendMessage(const Peer&, const Message &)=0;
     virtual void connectPeer(const Peer&)=0;
@@ -49,18 +50,18 @@ private:
     void removeSocket(const std::string& peerName);
     int getClientSocket(const std::string& peerName);
 
-    template<typename T> std::unique_ptr<T> deserializeMessage(const std::unique_ptr<uint8_t>& buffer, size_t size);
+    //template<typename T> std::unique_ptr<T> deserializeMessage(const std::unique_ptr<uint8_t>& buffer, size_t size);
     MessageHeader getMessageHeader(std::unique_ptr<uint8_t> headerBuff);
     void deserializeHandleMessage(int clientSocket, std::unique_ptr<uint8_t> messageBuff, const MessageHeader &);
+    std::tuple<std::unique_ptr<std::vector<uint8_t>>, int> serializeMessage(const Message& message);
 
     void startListening();
     void handleConnections(int clientSocket);
-    void connectPeer(const std::string &address, int remotePort);
 public:
     NetworkCom(int _localPort, std::shared_ptr<UiCallbacks> _uiCallbacks);
     ~NetworkCom() override;
 
-    void sendMessage(const Peer& peer,const Message& message) override;
+    void sendMessage(const Peer& peer, const Message& message) override;
     void connectPeer(const Peer& peer) override;
     void disconnect(const Peer& peer) override;
 };
