@@ -128,8 +128,7 @@ std::tuple< std::unique_ptr<std::vector<uint8_t>>, int> NetworkCom::serializeMes
             headerProto->set_type(messages::MessageType::IMAGE);
             auto imgMsg = dynamic_cast<const ImageMessage*>(&message);
             std::unique_ptr<messages::ImageMessage> imgMsgProto(new messages::ImageMessage());
-            std::copy(imgMsg->image.begin(), imgMsg->image.end(),
-                      imgMsgProto->mutable_image()->mutable_data());
+            *imgMsgProto->mutable_image() = {imgMsg->image.begin(), imgMsg->image.end()};
 
             bodySize = imgMsgProto->ByteSizeLong();
             bodyBuffer->reserve(bodySize);

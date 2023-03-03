@@ -45,6 +45,7 @@ struct ImageMessage : Message {
     ImageMessage() = default;
     explicit ImageMessage(const google::protobuf::RepeatedField<int> &_image) :
                             Message(MessageType::IMAGE), image(_image.begin(), _image.end()) {}
+    ImageMessage(const std::vector<uint8_t> &image) : Message(MessageType::IMAGE), image(image) {}
 };
 
 #endif
