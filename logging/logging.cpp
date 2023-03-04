@@ -5,6 +5,8 @@
 #include <iostream>
 #include <memory>
 
+std::shared_ptr<spdlog::logger> logger;
+
 std::tuple<bool, bool, std::string> parseConfig(){
     bool console = false;
     bool file = false;
@@ -45,4 +47,8 @@ void init_logging(){
     spdlog::set_default_logger(logger);
     spdlog::flush_every(std::chrono::seconds(10));
     spdlog::info("Successfully initialized logger.");
+}
+
+std::shared_ptr<spdlog::logger> getLogger(){
+    return logger;
 }

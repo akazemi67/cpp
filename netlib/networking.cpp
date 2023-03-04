@@ -15,14 +15,14 @@
 #define MSG_HEADER_PADD 1000000000
 #define MSG_HEADER_LEN  8
 
-NetworkCom::NetworkCom(int _localPort, std::shared_ptr<UiCallbacks> _uiCallbacks):
+NetworkCom::NetworkCom(int _localPort, UiCallbacks *_uiCallbacks):
         localPort(_localPort), uiCallbacks(_uiCallbacks) {
-    isListening = false;
+    isListeningLocally = false;
     listenerThread = std::make_unique<std::thread>([this](){this->startListening();});
 }
 
 NetworkCom::~NetworkCom(){
-    if(isListening) {
+    if(isListeningLocally) {
         close(localSocket);
         listenerThread->join();
     }
@@ -49,11 +49,11 @@ int NetworkCom::getClientSocket(const std::string &peerName) {
 }
 
 void NetworkCom::startListening() {
-    logger->info("Creating local socket on: {}",localPort);
+    getLogger()->info("Creating local socket on: {}",localPort);
 
     localSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (localSocket < 0) {
-        logger->error("socket creation on {} failed. errno: {}", localPort, errno);
+        getLogger()->error("socket creation on {} failed. errno: {}", localPort, errno);
         exit(EXIT_FAILURE);
     }
 
@@ -64,23 +64,25 @@ void NetworkCom::startListening() {
     addr.sin_addr.s_addr = INADDR_ANY;
 
     if (bind(localSocket, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        logger->error("Failed to bind for socker on {}. errno: {}", localPort, errno);
+        getLogger()->error("Failed to bind for socker on {}. errno: {}", localPort, errno);
         exit(EXIT_FAILURE);
     }
 
     if (listen(localSocket, SOMAXCONN) < 0) {
-        logger->error("Failed to listen on {}. errno: {}", localPort, errno);
+        getLogger()->error("Failed to listen on {}. errno: {}", localPort, errno);
         exit(EXIT_FAILURE);
     }
 
-    isListening = true;
-    logger->info("Waiting for connections on: {}", localPort);
+    getLogger()->info("Waiting for connections on: {}", localPort);
+    uiCallbacks->bindSucceeded();
+    isListeningLocally = true;
+
     while(true) {
         struct sockaddr_in client_addr{};
         socklen_t client_addr_len = sizeof(client_addr);
         int client_sockfd = accept(localSocket, (struct sockaddr *) &client_addr, &client_addr_len);
         if (client_sockfd < 0) {
-            logger->error("accept() failed on {}. errno: {}", localPort, errno);
+            getLogger()->error("accept() failed on {}. errno: {}", localPort, errno);
             continue;
         }
         new std::thread([this, client_sockfd](){ this->handleConnections(client_sockfd);});
@@ -137,7 +139,7 @@ std::tuple< std::unique_ptr<std::vector<uint8_t>>, int> NetworkCom::serializeMes
 
     std::unique_ptr<std::vector<uint8_t>> messageBuffer(new std::vector<uint8_t>(bufferLen));
     headerProto->SerializeToArray(messageBuffer->data(), headerSize);
-    logger->info("Serializing message with body size: {}", bodySize);
+    getLogger()->info("Serializing message with body size: {}", bodySize);
 
     std::copy(bodyBuffer->data(), bodyBuffer->data()+bufferLen, messageBuffer->data()+headerSize);
     return {std::move(messageBuffer), bufferLen};
@@ -199,13 +201,13 @@ void NetworkCom::handleConnections(int clientSocket) {
         std::unique_ptr<uint8_t> headerBuff(new uint8_t[headerSize]);
         ssize_t bytesReceived = recv(clientSocket, headerBuff.get(), headerSize, 0);
         if(bytesReceived<=0) {
-            logger->error("Error in receiving message header. errno: {}", errno);
+            getLogger()->error("Error in receiving message header. errno: {}", errno);
             return;
         }
 
         MessageHeader msgHeader = getMessageHeader(std::move(headerBuff));
         size_t msgBodySize = msgHeader.length - headerSize;
-        logger->info("Received a message with body size: {}", msgBodySize);
+        getLogger()->info("Received a message with body size: {}", msgBodySize);
         std::unique_ptr<uint8_t> messageBuffer(new uint8_t[msgBodySize]);
         size_t totalBytesReceived = 0;
 
@@ -213,7 +215,7 @@ void NetworkCom::handleConnections(int clientSocket) {
             bytesReceived = recv(clientSocket, messageBuffer.get() + totalBytesReceived,
                                  msgBodySize - totalBytesReceived, 0);
             if (bytesReceived <= 0) {
-                logger->error("Error getting message body! errno: {}", errno);
+                getLogger()->error("Error getting message body! errno: {}", errno);
                 return;
             }
             totalBytesReceived += bytesReceived;
@@ -226,16 +228,16 @@ void NetworkCom::handleConnections(int clientSocket) {
 void NetworkCom::sendMessage(const Peer& peer, const Message& message) {
     int clientSocket = getClientSocket(peer.name);
     if(clientSocket<0){
-        logger->warn("Invalid peer with name: {}", peer.name);
+        getLogger()->warn("Invalid peer with name: {}", peer.name);
         return;
     }
 
     auto [messageBytes, len] = serializeMessage(message);
-    logger->info("Sending {} bytes of data to peer: {}", len, peer.name);
+    getLogger()->info("Sending {} bytes of data to peer: {}", len, peer.name);
     send(clientSocket, messageBytes->data(), len, 0);
 }
 
-void NetworkCom::connectPeer(const Peer& peer) {
+bool NetworkCom::connectPeer(const Peer& peer) {
     struct hostent* host = gethostbyname(peer.IPv4.c_str());
     sockaddr_in sockAddr{};
     std::memset(&sockAddr, 0, sizeof(sockAddr));
@@ -246,15 +248,19 @@ void NetworkCom::connectPeer(const Peer& peer) {
     int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
     int status = connect(clientSocket, (sockaddr*) &sockAddr, sizeof(sockAddr));
     if(status < 0){
-        logger->warn("Cannot connect to {} on port {}", peer.IPv4, peer.port);
-        return;
+        getLogger()->warn("Cannot connect to {} on port {}", peer.IPv4, peer.port);
+        return false;
     }
 
-    logger->info("Successfully connected to peer {} on {}:{}", peer.name, peer.IPv4, peer.port);
+    getLogger()->info("Successfully connected to peer {} on {}:{}", peer.name, peer.IPv4, peer.port);
     addNewSocket(peer.name, clientSocket);
+    return true;
 }
 
 void NetworkCom::disconnect(const Peer& peer) {
 
 }
 
+std::unique_ptr<NetOps> createNetworking(int port, UiCallbacks *callbacks) {
+    return std::unique_ptr<NetOps>(reinterpret_cast<NetOps*>(new NetworkCom(port, callbacks)));
+}

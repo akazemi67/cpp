@@ -19,10 +19,10 @@ public:
         for(auto &peerInfo : peersArray){
             try {
                 Peer p(peerInfo["name"], peerInfo["ip"], peerInfo["port"]);
-                logger->info("Peer data fetched: {}, {}, {}", p.name, p.IPv4, p.port);
+                getLogger()->info("Peer data fetched: {}, {}, {}", p.name, p.IPv4, p.port);
                 result->push_back(std::move(p));
             } catch (json::exception &e){
-                logger->warn("Cannot parse json element: {} {}", e.id, e.what());
+                getLogger()->warn("Cannot parse json element: {} {}", e.id, e.what());
             }
         }
         return result;
@@ -52,7 +52,7 @@ public:
             if(row.size()<3)
                 continue;
             Peer p(row[0], row[1], std::stoi(row[2]));
-            logger->info("Peer data fetched: {}, {}, {}", p.name, p.IPv4, p.port);
+            getLogger()->info("Peer data fetched: {}, {}, {}", p.name, p.IPv4, p.port);
             result->push_back(std::move(p));
         }
         return result;
@@ -90,7 +90,7 @@ std::vector<std::unique_ptr<PeersDataReader>> DataReaderFactory::createDataReade
 
     for(auto& [name, path] : config["data_sources"].items()){
             std::string pathStr = config["data_sources"][name];
-            logger->info("Datasource {} with path {} exists.", name, pathStr);
+            getLogger()->info("Datasource {} with path {} exists.", name, pathStr);
             std::unique_ptr<PeersDataReader> dataReader = createDataReader(name, pathStr);
             if (dataReader != nullptr)
                 readers.push_back(std::move(dataReader));

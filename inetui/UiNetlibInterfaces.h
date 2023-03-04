@@ -11,6 +11,7 @@
 
 class UiCallbacks {
 public:
+    virtual void bindSucceeded()=0;
     virtual void newAuthMessage(std::unique_ptr<AuthMessage>)=0;
     virtual void newTextMessage(std::unique_ptr<TextMessage>)=0;
     virtual void newImageMessage(std::unique_ptr<ImageMessage>)=0;
@@ -21,17 +22,17 @@ public:
 class NetOps {
 public:
     virtual void sendMessage(const Peer&, const Message &)=0;
-    virtual void connectPeer(const Peer&)=0;
+    virtual bool connectPeer(const Peer&)=0;
     virtual void disconnect(const Peer&)=0;
     virtual ~NetOps() = default;
 };
 
 class NetworkCom : NetOps{
 private:
-    bool isListening;
+    bool isListeningLocally;
     int localPort;
     int localSocket;
-    std::shared_ptr<UiCallbacks> uiCallbacks;
+    UiCallbacks *uiCallbacks;
     std::unique_ptr<std::thread> listenerThread;
     std::map<std::string, int> openSockets; //unique_name -> socket_fd
     std::shared_mutex openSocketsMutex;
@@ -48,17 +49,15 @@ private:
     void startListening();
     void handleConnections(int clientSocket);
 public:
-    NetworkCom(int _localPort, std::shared_ptr<UiCallbacks> _uiCallbacks);
+    NetworkCom(int _localPort, UiCallbacks *_uiCallbacks);
     ~NetworkCom() override;
 
     void sendMessage(const Peer& peer, const Message& message) override;
-    void connectPeer(const Peer& peer) override;
+    bool connectPeer(const Peer& peer) override;
     void disconnect(const Peer& peer) override;
 };
 
 //TODO: Use factory instead of this method.
-std::unique_ptr<NetOps> createNetworking(int port, std::shared_ptr<UiCallbacks> callbacks){
-    return std::unique_ptr<NetOps>(reinterpret_cast<NetOps*>(new NetworkCom(port, callbacks)));
-}
+std::unique_ptr<NetOps> createNetworking(int port, UiCallbacks *callbacks);
 
 #endif

@@ -10,6 +10,6 @@
  Therefore, I call this function manually when the program starts.
  */
 void init_logging(); //__attribute__((constructor));
-std::shared_ptr<spdlog::logger> logger;
+std::shared_ptr<spdlog::logger> getLogger();
 
 #endif

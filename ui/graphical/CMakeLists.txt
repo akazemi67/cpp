@@ -22,14 +22,15 @@ set(PROJECT_SOURCES
         chatwindow.ui
 )
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_SOURCE_DIR}/inetui
+        ${CMAKE_SOURCE_DIR}/logging ${CMAKE_SOURCE_DIR}/dataio)
 
 qt_add_executable(QtChatPanel
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
         )
 
-target_link_libraries(QtChatPanel PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)
+target_link_libraries(QtChatPanel PRIVATE logging Qt6::Core Qt6::Gui Qt6::Widgets fmt dataio netlib)
 
 qt_finalize_executable(QtChatPanel)
 
