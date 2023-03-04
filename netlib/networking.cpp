@@ -85,6 +85,7 @@ void NetworkCom::startListening() {
             getLogger()->error("accept() failed on {}. errno: {}", localPort, errno);
             continue;
         }
+        getLogger()->info("Received a new connection. Waiting for AUTH message.");
         new std::thread([this, client_sockfd](){ this->handleConnections(client_sockfd);});
     }
 }
@@ -141,7 +142,7 @@ std::tuple< std::unique_ptr<std::vector<uint8_t>>, int> NetworkCom::serializeMes
     headerProto->SerializeToArray(messageBuffer->data(), headerSize);
     getLogger()->info("Serializing message with body size: {}", bodySize);
 
-    std::copy(bodyBuffer->data(), bodyBuffer->data()+bufferLen, messageBuffer->data()+headerSize);
+    std::copy(bodyBuffer->data(), bodyBuffer->data()+bodySize, messageBuffer->data()+headerSize);
     return {std::move(messageBuffer), bufferLen};
 }
 
@@ -200,7 +201,9 @@ void NetworkCom::handleConnections(int clientSocket) {
         size_t headerSize = MSG_HEADER_LEN;
         std::unique_ptr<uint8_t> headerBuff(new uint8_t[headerSize]);
         ssize_t bytesReceived = recv(clientSocket, headerBuff.get(), headerSize, 0);
-        if(bytesReceived<=0) {
+        if(bytesReceived == 0)
+            continue;
+        if(bytesReceived < 0) {
             getLogger()->error("Error in receiving message header. errno: {}", errno);
             return;
         }

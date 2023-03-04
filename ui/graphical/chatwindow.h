@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QMenu>
 #include <QMessageBox>
+#include <QListWidgetItem>
 #include "PeersInfo.h"
 #include "dataio.h"
 #include "UiNetlibInterfaces.h"
@@ -27,24 +28,26 @@ public:
 
 signals:
     void bindSignal();
+    void updateChatSignal(QString peer, QString msg, QBrush forColor, QBrush backColor);
 
 private slots:
     void bindSlot();
+    void updateChatSlot(QString, QString, QBrush, QBrush);
 
     void on_btnImage_clicked();
     void on_btnSend_clicked();
     void on_btnListen_clicked();
     void showContextMenu(const QPoint&);
     void connectPeer();
+    void onCurrentItemChanged(QListWidgetItem* current, QListWidgetItem* previous);
 
 private:
     Ui::ChatWindow *ui;
     std::shared_ptr<std::map<std::string, Peer>> peersInfo;
     std::shared_ptr<NetOps> networking;
-    bool networkingOk;
+    std::map<QString, std::vector<std::shared_ptr<QListWidgetItem>>> chatHistory;
 
     void readPeersInfo();
-
 };
 
 #endif

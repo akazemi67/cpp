@@ -8,42 +8,51 @@ ChatWindow::ChatWindow(QWidget *parent) : QMainWindow(parent)
     ui->setupUi(this);
     ui->lstAllPeers->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    connect(ui->lstAllPeers, SIGNAL(customContextMenuRequested(QPoint)),
-            this, SLOT(showContextMenu(QPoint)));
     connect(this, &ChatWindow::bindSignal, this, &ChatWindow::bindSlot);
+    connect(this, &ChatWindow::updateChatSignal, this, &ChatWindow::updateChatSlot);
+    connect(ui->lstAllPeers, &QListWidget::currentItemChanged, this, &ChatWindow::onCurrentItemChanged);
 
     readPeersInfo();
     ui->btnSend->setEnabled(false);
     ui->btnImage->setEnabled(false);
+    ui->edtPort->setText("1337");
+    ui->edtName->setText("EliteQt");
 }
 
-void ChatWindow::showContextMenu(const QPoint &pos)
-{
+void ChatWindow::showContextMenu(const QPoint &pos) {
     QPoint globalPos = ui->lstAllPeers->mapToGlobal(pos);
-
-    QMenu myMenu;
-    myMenu.addAction("Connect", this, SLOT(connectPeer()));
-
-    myMenu.exec(globalPos);
+    QMenu connMenu;
+    connMenu.addAction("Connect", this, SLOT(connectPeer()));
+    connMenu.exec(globalPos);
 }
 
-void ChatWindow::connectPeer(){
-    const QString &text= ui->lstAllPeers->currentItem()->text();
-    QMessageBox::information(this, "connect","Selected: "+ text);
+void ChatWindow::connectPeer() {
+    auto currentItem = ui->lstAllPeers->currentItem();
+    const QString &name = currentItem->text();
+    auto peer = peersInfo->find(name.toStdString());
+    if(networking->connectPeer(peer->second)) {
+        AuthMessage auth(ui->edtName->text().toStdString());
+        try {
+            networking->sendMessage(peer->second, auth);
+        }catch (...){}
+        currentItem->setForeground(QBrush(QColor(Qt::green)));
+
+        emit updateChatSignal(QString(peer->second.name.c_str()),
+                              "------ Chat Started ------",
+                              QBrush(QColor(Qt::white)),
+                              QBrush(QColor(Qt::black)));
+    }
 }
 
-ChatWindow::~ChatWindow()
-{
+ChatWindow::~ChatWindow() {
     delete ui;
 }
 
-void ChatWindow::on_btnImage_clicked()
-{
+void ChatWindow::on_btnImage_clicked() {
 
 }
 
-void ChatWindow::on_btnSend_clicked()
-{
+void ChatWindow::on_btnSend_clicked() {
 
 }
 
@@ -94,12 +103,39 @@ void ChatWindow::bindSucceeded() {
 }
 
 void ChatWindow::bindSlot() {
-    networkingOk = true;
     ui->edtPort->setEnabled(false);
     ui->edtName->setEnabled(false);
     ui->btnListen->setEnabled(false);
-    ui->btnSend->setEnabled(true);
-    ui->btnImage->setEnabled(true);
+    connect(ui->lstAllPeers, SIGNAL(customContextMenuRequested(QPoint)),
+            this, SLOT(showContextMenu(QPoint)));
     QMessageBox::information(this, "BindOK", "Listening Succeeded. Waiting for connections.");
+}
+
+void ChatWindow::onCurrentItemChanged(QListWidgetItem *current, QListWidgetItem *previous) {
+    auto name = current->text();
+    auto chatIt = chatHistory.find(name);
+    for(auto i=0; i<ui->lstChat->count(); i++)
+        ui->lstChat->takeItem(i);
+    if(chatIt!=chatHistory.end()){
+        for(auto item : chatHistory[name]){
+            ui->lstChat->addItem(item.get());
+        }
+
+        ui->btnSend->setEnabled(true);
+        ui->btnImage->setEnabled(true);
+    }
+    else {
+        ui->btnSend->setEnabled(false);
+        ui->btnImage->setEnabled(false);
+    }
+}
+
+void ChatWindow::updateChatSlot(QString peer, QString msg, QBrush forColor, QBrush backColor) {
+    auto chatItem = std::make_shared<QListWidgetItem>();
+    chatItem->setText(msg);
+    chatItem->setBackground(backColor);
+    chatItem->setForeground(forColor);
+    ui->lstChat->addItem(chatItem.get());
+    chatHistory[peer].push_back(chatItem);
 }
 
