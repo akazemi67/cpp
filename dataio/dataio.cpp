@@ -12,7 +12,20 @@ public:
     explicit JsonDataReader(const std::string &jsonFilePath) : jsonFilePath(jsonFilePath) {}
 
     std::unique_ptr<std::vector<Peer>> readData() override {
-        return {};
+        auto result = std::make_unique<std::vector<Peer>>();
+        std::ifstream dataFile(jsonFilePath);
+        json peersArray = json::parse(dataFile);
+
+        for(auto &peerInfo : peersArray){
+            try {
+                Peer p(peerInfo["name"], peerInfo["ip"], peerInfo["port"]);
+                logger->info("Peer data fetched: {}, {}, {}", p.name, p.IPv4, p.port);
+                result->push_back(std::move(p));
+            } catch (json::exception &e){
+                logger->warn("Cannot parse json element: {} {}", e.id, e.what());
+            }
+        }
+        return result;
     }
 };
 
@@ -23,7 +36,26 @@ public:
     explicit CsvDataReader(const std::string &csvFilePath) : csvFilePath(csvFilePath) {}
 
     std::unique_ptr<std::vector<Peer>> readData() override {
-        return {};
+        auto result = std::make_unique<std::vector<Peer>>();
+        std::ifstream file(csvFilePath);
+
+        const char delimiter = ',';
+        std::string line;
+        while (std::getline(file, line)) {
+            std::stringstream ss(line);
+            std::string column;
+            std::vector<std::string> row;
+
+            while (std::getline(ss, column, delimiter)) {
+                row.push_back(column);
+            }
+            if(row.size()<3)
+                continue;
+            Peer p(row[0], row[1], std::stoi(row[2]));
+            logger->info("Peer data fetched: {}, {}, {}", p.name, p.IPv4, p.port);
+            result->push_back(std::move(p));
+        }
+        return result;
     }
 };
 
