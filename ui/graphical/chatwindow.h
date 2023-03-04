@@ -22,18 +22,18 @@ public:
 
     void bindSucceeded() override;
 
-    void newAuthMessage(std::string &peerName, std::unique_ptr<AuthMessage> authMsg) override;
-    void newTextMessage(std::string &peerName, std::unique_ptr<TextMessage> txtMsg) override;
-    void newImageMessage(std::string &peerName, std::unique_ptr<ImageMessage> imgMsg) override;
-    void peerDisconnect(const std::string &peerName) override;
+    void newAuthMessage(std::string peerName, std::unique_ptr<AuthMessage> authMsg) override;
+    void newTextMessage(std::string peerName, std::unique_ptr<TextMessage> txtMsg) override;
+    void newImageMessage(std::string peerName, std::unique_ptr<ImageMessage> imgMsg) override;
+    void peerDisconnect(const std::string peerName) override;
 
 signals:
     void bindSignal();
-    void updateChatSignal(QString peer, QString msg, QBrush forColor, QBrush backColor);
+    void updateChatSignal(QString peer, QString msg);
 
 private slots:
     void bindSlot();
-    void updateChatSlot(QString, QString, QBrush, QBrush);
+    void updateChatSlot(QString, QString);
 
     void on_btnImage_clicked();
     void on_btnSend_clicked();
@@ -46,9 +46,10 @@ private:
     Ui::ChatWindow *ui;
     std::shared_ptr<std::map<std::string, Peer>> peersInfo;
     std::shared_ptr<NetOps> networking;
-    std::map<QString, std::vector<std::shared_ptr<QListWidgetItem>>> chatHistory;
+    std::map<QString, std::vector<QString>> chatHistory;
 
     void readPeersInfo();
+    void updateCurrentPeerChat();
 };
 
 #endif

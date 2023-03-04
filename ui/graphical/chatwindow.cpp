@@ -10,6 +10,7 @@ ChatWindow::ChatWindow(QWidget *parent) : QMainWindow(parent)
     connect(this, &ChatWindow::bindSignal, this, &ChatWindow::bindSlot);
     connect(this, &ChatWindow::updateChatSignal, this, &ChatWindow::updateChatSlot);
     connect(ui->lstAllPeers, &QListWidget::currentItemChanged, this, &ChatWindow::onCurrentItemChanged);
+    connect(ui->edtChat, &QLineEdit::returnPressed, this, &ChatWindow::on_btnSend_clicked);
 
     readPeersInfo();
     ui->btnSend->setEnabled(false);
@@ -41,9 +42,7 @@ void ChatWindow::connectPeer() {
         ui->btnImage->setEnabled(true);
 
         emit updateChatSignal(QString(peer->second.name.c_str()),
-                              "------ Chat Started ------",
-                              QBrush(QColor(Qt::white)),
-                              QBrush(QColor(Qt::black)));
+                              "------ Chat Started ------");
     }
 }
 
@@ -60,10 +59,8 @@ void ChatWindow::on_btnSend_clicked() {
     auto peerName = ui->lstAllPeers->currentItem()->text();
     TextMessage txtMsg(msgText.toStdString());
     networking->sendMessage(peerName.toStdString(), txtMsg);
-    emit updateChatSignal(peerName,
-                          msgText,
-                          QBrush(QColor(Qt::blue)),
-                          QBrush(QColor(Qt::white)));
+    ui->edtChat->setText("");
+    emit updateChatSignal(peerName,"[SND]: "+ msgText);
 }
 
 void ChatWindow::on_btnListen_clicked() {
@@ -106,49 +103,60 @@ void ChatWindow::bindSlot() {
 }
 
 void ChatWindow::onCurrentItemChanged(QListWidgetItem *current, QListWidgetItem *previous) {
-    auto name = current->text();
-    auto chatIt = chatHistory.find(name);
-    for(auto i=0; i<ui->lstChat->count(); i++)
-        ui->lstChat->takeItem(i);
-    if(chatIt!=chatHistory.end()){
-        for(auto item : chatHistory[name]){
-            ui->lstChat->addItem(item.get());
-        }
-
+    ui->btnSend->setEnabled(false);
+    ui->btnImage->setEnabled(false);
+    if(current->foreground() == QBrush(QColor(Qt::green))){
         ui->btnSend->setEnabled(true);
         ui->btnImage->setEnabled(true);
     }
-    else {
-        ui->btnSend->setEnabled(false);
-        ui->btnImage->setEnabled(false);
-    }
+    updateCurrentPeerChat();
 }
 
-void ChatWindow::updateChatSlot(QString peer, QString msg, QBrush forColor, QBrush backColor) {
+void ChatWindow::updateChatSlot(QString peer, QString msg) {
     auto chatItem = std::make_shared<QListWidgetItem>();
-    chatItem->setText(msg);
-    chatItem->setBackground(backColor);
-    chatItem->setForeground(forColor);
-    ui->lstChat->addItem(chatItem.get());
-    chatHistory[peer].push_back(chatItem);
+    chatHistory[peer].push_back(msg);
+    updateCurrentPeerChat();
 }
 
-void ChatWindow::newAuthMessage(std::string &peerName, std::unique_ptr<AuthMessage> authMsg) {
+void ChatWindow::newAuthMessage(std::string peerName, std::unique_ptr<AuthMessage> authMsg) {
+    QListWidgetItem *peerItem = nullptr;
+    for(auto i=0; i<ui->lstAllPeers->count(); i++){
+        auto item = ui->lstAllPeers->item(i);
+        if(peerName == item->text().toStdString()){
+            peerItem = item;
+            break;
+        }
+    }
+    if(!peerItem){
+        peerItem = new QListWidgetItem(QString(peerName.c_str()));
+        ui->lstAllPeers->addItem(peerItem);
+    }
+
+    peerItem->setForeground(QBrush(QColor(Qt::green)));
+    emit updateChatSignal(peerItem->text(),"------ Chat Started ------");
+}
+
+void ChatWindow::newTextMessage(std::string peerName, std::unique_ptr<TextMessage> txtMsg) {
+    emit updateChatSignal(QString(peerName.c_str()), "[RCV]: " + QString(txtMsg->text.c_str()));
+}
+
+void ChatWindow::newImageMessage(std::string peerName, std::unique_ptr<ImageMessage> imgMsg) {
 
 }
 
-void ChatWindow::newTextMessage(std::string &peerName, std::unique_ptr<TextMessage> txtMsg) {
-    emit updateChatSignal(QString(peerName.c_str()),
-                          QString(txtMsg->text.c_str()),
-                          QBrush(QColor(Qt::magenta)),
-                          QBrush(QColor(Qt::white)));
-}
-
-void ChatWindow::newImageMessage(std::string &peerName, std::unique_ptr<ImageMessage> imgMsg) {
+void ChatWindow::peerDisconnect(const std::string peerName) {
 
 }
 
-void ChatWindow::peerDisconnect(const std::string &peerName) {
+void ChatWindow::updateCurrentPeerChat() {
+    ui->lstChat->clear();
 
+    auto name = ui->lstAllPeers->currentItem()->text();
+    auto chatIt = chatHistory.find(name);
+    if(chatIt!=chatHistory.end()){
+        for(auto item : chatHistory[name]){
+            ui->lstChat->addItem(item);
+        }
+    }
 }
 

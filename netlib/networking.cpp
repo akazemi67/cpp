@@ -185,14 +185,19 @@ void NetworkCom::deserializeHandleMessage(int clientSocket,
             std::unique_ptr<messages::AuthMessage> authMsgProto(new messages::AuthMessage());
             authMsgProto->ParseFromArray(messageBuff.get(), bufferSize);
             std::unique_ptr<AuthMessage> authMessage(new AuthMessage(authMsgProto->name()));
-            addNewSocket(authMessage->name, clientSocket);
-            uiCallbacks->newAuthMessage(authMessage->name, std::move(authMessage));
+
+            socketName = authMessage->name;
+            addNewSocket(socketName, clientSocket);
+            getLogger()->info("Received AUTH message from {}", socketName);
+            uiCallbacks->newAuthMessage(socketName, std::move(authMessage));
             break;
         }
         case MessageType::TEXT: {
             std::unique_ptr<messages::TextMessage> textMsgProto(new messages::TextMessage());
             textMsgProto->ParseFromArray(messageBuff.get(), bufferSize);
             std::unique_ptr<TextMessage> textMessage(new TextMessage(textMsgProto->text()));
+
+            getLogger()->info("Received TEXT message from {}", socketName);
             uiCallbacks->newTextMessage(socketName, std::move(textMessage));
             break;
         }
@@ -200,6 +205,8 @@ void NetworkCom::deserializeHandleMessage(int clientSocket,
             std::unique_ptr<messages::ImageMessage> imgMsgProto(new messages::ImageMessage());
             imgMsgProto->ParseFromArray(messageBuff.get(), bufferSize);
             std::unique_ptr<ImageMessage> imageMessage(new ImageMessage(imgMsgProto->image()));
+
+            getLogger()->info("Received IMAGE message from {}", socketName);
             uiCallbacks->newImageMessage(socketName, std::move(imageMessage));
             break;
         }

@@ -12,10 +12,10 @@
 class UiCallbacks {
 public:
     virtual void bindSucceeded()=0;
-    virtual void newAuthMessage(std::string &peerName, std::unique_ptr<AuthMessage> authMsg)=0;
-    virtual void newTextMessage(std::string &peerName, std::unique_ptr<TextMessage> txtMsg)=0;
-    virtual void newImageMessage(std::string &peerName, std::unique_ptr<ImageMessage> imgMsg)=0;
-    virtual void peerDisconnect(const std::string &peerName)=0;
+    virtual void newAuthMessage(std::string peerName, std::unique_ptr<AuthMessage> authMsg)=0;
+    virtual void newTextMessage(std::string peerName, std::unique_ptr<TextMessage> txtMsg)=0;
+    virtual void newImageMessage(std::string peerName, std::unique_ptr<ImageMessage> imgMsg)=0;
+    virtual void peerDisconnect(const std::string peerName)=0;
     virtual ~UiCallbacks()=default;
 };
 
