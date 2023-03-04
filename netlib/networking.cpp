@@ -31,6 +31,7 @@ NetworkCom::~NetworkCom(){
 void NetworkCom::addNewSocket(const std::string &peerName, int clientSocket) {
     std::unique_lock<std::shared_mutex> lock(openSocketsMutex);
     openSockets[peerName] = clientSocket;
+    openSocketsToName[clientSocket] = peerName;
 }
 
 void NetworkCom::removeSocket(const std::string &peerName) {
@@ -46,6 +47,14 @@ int NetworkCom::getClientSocket(const std::string &peerName) {
     if(it != openSockets.end())
         return it->second;
     return -1;
+}
+
+std::string NetworkCom::getSocketName(int clientSocket) {
+    std::shared_lock<std::shared_mutex> lock(openSocketsMutex);
+    auto it = openSocketsToName.find(clientSocket);
+    if(it != openSocketsToName.end())
+        return it->second;
+    return "[INVALID]";
 }
 
 void NetworkCom::startListening() {
@@ -165,9 +174,11 @@ MessageHeader NetworkCom::getMessageHeader(std::unique_ptr<uint8_t> headerBuff) 
     return msgHeader;
 }
 
-void NetworkCom::deserializeHandleMessage(int clientSocket, std::unique_ptr<uint8_t> messageBuff,
+void NetworkCom::deserializeHandleMessage(int clientSocket,
+                                          std::unique_ptr<uint8_t> messageBuff,
                                           const MessageHeader &header) {
     ssize_t bufferSize = header.length - MSG_HEADER_LEN;
+    std::string socketName = getSocketName(clientSocket);
     //TODO: do it in a more general way!
     switch (header.type) {
         case MessageType::AUTH: {
@@ -175,21 +186,21 @@ void NetworkCom::deserializeHandleMessage(int clientSocket, std::unique_ptr<uint
             authMsgProto->ParseFromArray(messageBuff.get(), bufferSize);
             std::unique_ptr<AuthMessage> authMessage(new AuthMessage(authMsgProto->name()));
             addNewSocket(authMessage->name, clientSocket);
-            uiCallbacks->newAuthMessage(std::move(authMessage));
+            uiCallbacks->newAuthMessage(authMessage->name, std::move(authMessage));
             break;
         }
         case MessageType::TEXT: {
             std::unique_ptr<messages::TextMessage> textMsgProto(new messages::TextMessage());
             textMsgProto->ParseFromArray(messageBuff.get(), bufferSize);
             std::unique_ptr<TextMessage> textMessage(new TextMessage(textMsgProto->text()));
-            uiCallbacks->newTextMessage(std::move(textMessage));
+            uiCallbacks->newTextMessage(socketName, std::move(textMessage));
             break;
         }
         case MessageType::IMAGE: {
             std::unique_ptr<messages::ImageMessage> imgMsgProto(new messages::ImageMessage());
             imgMsgProto->ParseFromArray(messageBuff.get(), bufferSize);
             std::unique_ptr<ImageMessage> imageMessage(new ImageMessage(imgMsgProto->image()));
-            uiCallbacks->newImageMessage(std::move(imageMessage));
+            uiCallbacks->newImageMessage(socketName, std::move(imageMessage));
             break;
         }
     }
@@ -228,15 +239,15 @@ void NetworkCom::handleConnections(int clientSocket) {
     }
 }
 
-void NetworkCom::sendMessage(const Peer& peer, const Message& message) {
-    int clientSocket = getClientSocket(peer.name);
+void NetworkCom::sendMessage(const std::string & peerName, const Message& message) {
+    int clientSocket = getClientSocket(peerName);
     if(clientSocket<0){
-        getLogger()->warn("Invalid peer with name: {}", peer.name);
+        getLogger()->warn("Invalid peer with name: {}", peerName);
         return;
     }
 
     auto [messageBytes, len] = serializeMessage(message);
-    getLogger()->info("Sending {} bytes of data to peer: {}", len, peer.name);
+    getLogger()->info("Sending {} bytes of data to peer: {}", len, peerName);
     send(clientSocket, messageBytes->data(), len, 0);
 }
 
@@ -257,6 +268,9 @@ bool NetworkCom::connectPeer(const Peer& peer) {
 
     getLogger()->info("Successfully connected to peer {} on {}:{}", peer.name, peer.IPv4, peer.port);
     addNewSocket(peer.name, clientSocket);
+
+    //Waiting for messages from connected peer
+    new std::thread([this, clientSocket](){ this->handleConnections(clientSocket);});
     return true;
 }
 

@@ -12,16 +12,16 @@
 class UiCallbacks {
 public:
     virtual void bindSucceeded()=0;
-    virtual void newAuthMessage(std::unique_ptr<AuthMessage>)=0;
-    virtual void newTextMessage(std::unique_ptr<TextMessage>)=0;
-    virtual void newImageMessage(std::unique_ptr<ImageMessage>)=0;
-    virtual void peerDisconnect(const Peer&)=0;
+    virtual void newAuthMessage(std::string &peerName, std::unique_ptr<AuthMessage> authMsg)=0;
+    virtual void newTextMessage(std::string &peerName, std::unique_ptr<TextMessage> txtMsg)=0;
+    virtual void newImageMessage(std::string &peerName, std::unique_ptr<ImageMessage> imgMsg)=0;
+    virtual void peerDisconnect(const std::string &peerName)=0;
     virtual ~UiCallbacks()=default;
 };
 
 class NetOps {
 public:
-    virtual void sendMessage(const Peer&, const Message &)=0;
+    virtual void sendMessage(const std::string &, const Message &)=0;
     virtual bool connectPeer(const Peer&)=0;
     virtual void disconnect(const Peer&)=0;
     virtual ~NetOps() = default;
@@ -35,11 +35,13 @@ private:
     UiCallbacks *uiCallbacks;
     std::unique_ptr<std::thread> listenerThread;
     std::map<std::string, int> openSockets; //unique_name -> socket_fd
+    std::map<int, std::string> openSocketsToName;
     std::shared_mutex openSocketsMutex;
 
     void addNewSocket(const std::string& peerName, int clientSocket);
     void removeSocket(const std::string& peerName);
     int getClientSocket(const std::string& peerName);
+    std::string getSocketName(int clientSocket);
 
     //template<typename T> std::unique_ptr<T> deserializeMessage(const std::unique_ptr<uint8_t>& buffer, size_t size);
     MessageHeader getMessageHeader(std::unique_ptr<uint8_t> headerBuff);
@@ -52,7 +54,7 @@ public:
     NetworkCom(int _localPort, UiCallbacks *_uiCallbacks);
     ~NetworkCom() override;
 
-    void sendMessage(const Peer& peer, const Message& message) override;
+    void sendMessage(const std::string &peer, const Message& message) override;
     bool connectPeer(const Peer& peer) override;
     void disconnect(const Peer& peer) override;
 };

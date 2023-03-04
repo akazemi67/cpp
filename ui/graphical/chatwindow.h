@@ -20,11 +20,12 @@ public:
     ChatWindow(QWidget *parent = nullptr);
     ~ChatWindow();
 
-    void newAuthMessage(std::unique_ptr<AuthMessage> ptr) override;
-    void newTextMessage(std::unique_ptr<TextMessage> ptr) override;
-    void newImageMessage(std::unique_ptr<ImageMessage> ptr) override;
-    void peerDisconnect(const Peer &peer) override;
     void bindSucceeded() override;
+
+    void newAuthMessage(std::string &peerName, std::unique_ptr<AuthMessage> authMsg) override;
+    void newTextMessage(std::string &peerName, std::unique_ptr<TextMessage> txtMsg) override;
+    void newImageMessage(std::string &peerName, std::unique_ptr<ImageMessage> imgMsg) override;
+    void peerDisconnect(const std::string &peerName) override;
 
 signals:
     void bindSignal();

@@ -3,8 +3,7 @@
 #include "logging.h"
 
 ChatWindow::ChatWindow(QWidget *parent) : QMainWindow(parent)
-    , ui(new Ui::ChatWindow)
-{
+    , ui(new Ui::ChatWindow) {
     ui->setupUi(this);
     ui->lstAllPeers->setContextMenuPolicy(Qt::CustomContextMenu);
 
@@ -30,12 +29,16 @@ void ChatWindow::connectPeer() {
     auto currentItem = ui->lstAllPeers->currentItem();
     const QString &name = currentItem->text();
     auto peer = peersInfo->find(name.toStdString());
+
     if(networking->connectPeer(peer->second)) {
         AuthMessage auth(ui->edtName->text().toStdString());
         try {
-            networking->sendMessage(peer->second, auth);
+            networking->sendMessage(peer->second.name, auth);
         }catch (...){}
+
         currentItem->setForeground(QBrush(QColor(Qt::green)));
+        ui->btnSend->setEnabled(true);
+        ui->btnImage->setEnabled(true);
 
         emit updateChatSignal(QString(peer->second.name.c_str()),
                               "------ Chat Started ------",
@@ -53,7 +56,14 @@ void ChatWindow::on_btnImage_clicked() {
 }
 
 void ChatWindow::on_btnSend_clicked() {
-
+    auto msgText = ui->edtChat->text();
+    auto peerName = ui->lstAllPeers->currentItem()->text();
+    TextMessage txtMsg(msgText.toStdString());
+    networking->sendMessage(peerName.toStdString(), txtMsg);
+    emit updateChatSignal(peerName,
+                          msgText,
+                          QBrush(QColor(Qt::blue)),
+                          QBrush(QColor(Qt::white)));
 }
 
 void ChatWindow::on_btnListen_clicked() {
@@ -80,22 +90,6 @@ void ChatWindow::readPeersInfo() {
             ui->lstAllPeers->addItem(QString(info.name.c_str()));
         }
     }
-}
-
-void ChatWindow::newAuthMessage(std::unique_ptr<AuthMessage> ptr) {
-
-}
-
-void ChatWindow::newTextMessage(std::unique_ptr<TextMessage> ptr) {
-
-}
-
-void ChatWindow::newImageMessage(std::unique_ptr<ImageMessage> ptr) {
-
-}
-
-void ChatWindow::peerDisconnect(const Peer &peer) {
-
 }
 
 void ChatWindow::bindSucceeded() {
@@ -137,5 +131,24 @@ void ChatWindow::updateChatSlot(QString peer, QString msg, QBrush forColor, QBru
     chatItem->setForeground(forColor);
     ui->lstChat->addItem(chatItem.get());
     chatHistory[peer].push_back(chatItem);
+}
+
+void ChatWindow::newAuthMessage(std::string &peerName, std::unique_ptr<AuthMessage> authMsg) {
+
+}
+
+void ChatWindow::newTextMessage(std::string &peerName, std::unique_ptr<TextMessage> txtMsg) {
+    emit updateChatSignal(QString(peerName.c_str()),
+                          QString(txtMsg->text.c_str()),
+                          QBrush(QColor(Qt::magenta)),
+                          QBrush(QColor(Qt::white)));
+}
+
+void ChatWindow::newImageMessage(std::string &peerName, std::unique_ptr<ImageMessage> imgMsg) {
+
+}
+
+void ChatWindow::peerDisconnect(const std::string &peerName) {
+
 }
 
