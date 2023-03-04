@@ -9,6 +9,9 @@ set(PROTO_FILES
         protos/messages.proto
         )
 
+#add_compile_options(-fsanitize=address)
+#add_link_options(-fsanitize=address)
+
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROTO_FILES})
 
 add_library(netlib SHARED ${PROTO_SRCS} ${PROTO_HDRS} networking.cpp)

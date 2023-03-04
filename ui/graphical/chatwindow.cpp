@@ -1,6 +1,8 @@
 #include "chatwindow.h"
 #include "./ui_chatwindow.h"
 #include "logging.h"
+#include "ImageWidget.h"
+#include <QFileDialog>
 
 ChatWindow::ChatWindow(QWidget *parent) : QMainWindow(parent)
     , ui(new Ui::ChatWindow) {
@@ -9,6 +11,7 @@ ChatWindow::ChatWindow(QWidget *parent) : QMainWindow(parent)
 
     connect(this, &ChatWindow::bindSignal, this, &ChatWindow::bindSlot);
     connect(this, &ChatWindow::updateChatSignal, this, &ChatWindow::updateChatSlot);
+    connect(this, &ChatWindow::imageRecvSignal, this, &ChatWindow::imageRecvSlot);
     connect(ui->lstAllPeers, &QListWidget::currentItemChanged, this, &ChatWindow::onCurrentItemChanged);
     connect(ui->edtChat, &QLineEdit::returnPressed, this, &ChatWindow::on_btnSend_clicked);
 
@@ -51,6 +54,22 @@ ChatWindow::~ChatWindow() {
 }
 
 void ChatWindow::on_btnImage_clicked() {
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Open Image"), "",
+                                                    tr("All files (*.*);;JPEG (*.jpg *.jpeg);;TIFF (*.tif)"));
+    if (!fileName.isEmpty()) {
+        QFile file(fileName);
+        if (!file.open(QIODevice::ReadOnly)) {
+            getLogger()->error("Error opening image file to read.");
+            return;
+        }
+
+        QByteArray byteArray = file.readAll();
+        auto imgBytes = std::make_shared<std::vector<uint8_t>>(byteArray.begin(), byteArray.end());
+        ImageMessage imageMessage(imgBytes);
+        auto peerName = ui->lstAllPeers->currentItem()->text();
+        networking->sendMessage(peerName.toStdString(), imageMessage);
+        file.close();
+    }
 
 }
 
@@ -141,7 +160,9 @@ void ChatWindow::newTextMessage(std::string peerName, std::unique_ptr<TextMessag
 }
 
 void ChatWindow::newImageMessage(std::string peerName, std::unique_ptr<ImageMessage> imgMsg) {
-
+    QString title = "IMG from:: ";
+    title += peerName.c_str();
+    emit imageRecvSignal(title, *imgMsg->image);
 }
 
 void ChatWindow::peerDisconnect(const std::string peerName) {
@@ -158,5 +179,12 @@ void ChatWindow::updateCurrentPeerChat() {
             ui->lstChat->addItem(item);
         }
     }
+}
+
+void ChatWindow::imageRecvSlot(QString title, const std::vector<uint8_t> &imageData) {
+    auto imgWidget = new ImageWidget(imageData);
+    imgWidget->setGeometry(this->geometry());
+    imgWidget->setWindowTitle(title);
+    imgWidget->show();
 }
 

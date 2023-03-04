@@ -41,11 +41,13 @@ struct TextMessage : Message {
 };
 
 struct ImageMessage : Message {
-    std::vector<uint8_t> image;
+    std::shared_ptr<std::vector<uint8_t>> image;
     ImageMessage() = default;
     explicit ImageMessage(const google::protobuf::RepeatedField<int> &_image) :
-                            Message(MessageType::IMAGE), image(_image.begin(), _image.end()) {}
-    ImageMessage(const std::vector<uint8_t> &image) : Message(MessageType::IMAGE), image(image) {}
+                            Message(MessageType::IMAGE) {
+        image = std::make_shared<std::vector<uint8_t>>(_image.begin(), _image.end());
+    }
+    explicit ImageMessage(std::shared_ptr<std::vector<uint8_t>> _image) : Message(MessageType::IMAGE), image(_image) {}
 };
 
 #endif

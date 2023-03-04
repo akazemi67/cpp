@@ -30,10 +30,12 @@ public:
 signals:
     void bindSignal();
     void updateChatSignal(QString peer, QString msg);
+    void imageRecvSignal(QString title, const std::vector<uint8_t>&imageData);
 
 private slots:
     void bindSlot();
     void updateChatSlot(QString, QString);
+    void imageRecvSlot(QString title, const std::vector<uint8_t>&imageData);
 
     void on_btnImage_clicked();
     void on_btnSend_clicked();

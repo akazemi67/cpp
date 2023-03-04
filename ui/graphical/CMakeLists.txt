@@ -9,6 +9,9 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+#add_compile_options(-fsanitize=address)
+#add_link_options(-fsanitize=address)
+
 find_package(Qt6 COMPONENTS
         Core
         Gui
@@ -20,7 +23,7 @@ set(PROJECT_SOURCES
         chatwindow.cpp
         chatwindow.h
         chatwindow.ui
-)
+        ImageWidget.h)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_SOURCE_DIR}/inetui
         ${CMAKE_SOURCE_DIR}/logging ${CMAKE_SOURCE_DIR}/dataio)
