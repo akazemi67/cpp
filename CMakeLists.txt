@@ -10,6 +10,7 @@ find_package(Qt6 COMPONENTS
 
 add_subdirectory(logging)
 add_subdirectory(inetui)
+add_subdirectory(dataio)
 add_subdirectory(netlib)
 add_subdirectory(ui/graphical)
 add_subdirectory(ui/console)

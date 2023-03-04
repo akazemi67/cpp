@@ -2,22 +2,12 @@
 #define P2PCHAT_UINETLIBINTERFACES_H
 
 #include "MessageTypes.h"
+#include "PeersInfo.h"
 
 #include <memory>
 #include <thread>
 #include <shared_mutex>
 #include <map>
-
-struct Peer{
-    std::string IPv4;
-    short port;
-    std::string name;
-    bool operator<(const Peer &p) const{
-        return (IPv4 == p.IPv4) ?
-               (port < p.port) :
-               (IPv4 < p.IPv4);
-    }
-};
 
 class UiCallbacks {
 public:
