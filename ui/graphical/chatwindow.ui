@@ -14,22 +14,6 @@
    <string>P2P Chat</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QListView" name="lstPeers">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>130</y>
-      <width>141</width>
-      <height>311</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <family>Source Code Pro</family>
-      <pointsize>12</pointsize>
-     </font>
-    </property>
-   </widget>
    <widget class="QLabel" name="lblPeers">
     <property name="geometry">
      <rect>
@@ -142,7 +126,7 @@
      <string>Send</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="btnConnect">
+   <widget class="QPushButton" name="btnListen">
     <property name="geometry">
      <rect>
       <x>370</x>
@@ -158,7 +142,7 @@
      </font>
     </property>
     <property name="text">
-     <string>Connect </string>
+     <string>Listen </string>
     </property>
    </widget>
    <widget class="QLabel" name="lblPort">
@@ -220,6 +204,16 @@
       <y>60</y>
       <width>113</width>
       <height>25</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QListWidget" name="lstAllPeers">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>130</y>
+      <width>141</width>
+      <height>311</height>
      </rect>
     </property>
    </widget>

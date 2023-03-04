@@ -17,10 +17,10 @@ public:
 
 private slots:
     void on_btnImage_clicked();
-
     void on_btnSend_clicked();
-
-    void on_btnConnect_clicked();
+    void on_btnListen_clicked();
+    void showContextMenu(const QPoint&);
+    void connectPeer();
 
 private:
     Ui::ChatWindow *ui;
