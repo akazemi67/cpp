@@ -1,11 +1,19 @@
+#include "chatwindow.h"
+#include "logging.h"
+
 #include <QApplication>
-#include <QPushButton>
+#include <QGuiApplication>
+#include <QScreen>
 
 int main(int argc, char *argv[]) {
+    init_logging();
     QApplication a(argc, argv);
-    QPushButton button("Hello world!", nullptr);
-    button.resize(200, 100);
-    button.show();
-    return QApplication::exec();
+    ChatWindow w;
+    QRect screenGeometry = QGuiApplication::primaryScreen()->geometry();
+    int x = (screenGeometry.width()-w.width()) / 2;
+    int y = (screenGeometry.height()-w.height()) / 2;
+    w.move(x,y);
+    logger->info("Starting chat gui in position ({},{})", x, y);
+    w.show();
+    return a.exec();
 }
-

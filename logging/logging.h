@@ -4,7 +4,12 @@
 #include <spdlog/spdlog.h>
 #include "spdlog/fmt/bin_to_hex.h"
 
-void init_logging();
+/*
+ I wanted this function to be called automatically when .so file is loaded.
+ However, in this multi-threaded program this method didn't work as expected.
+ Therefore, I call this function manually when the program starts.
+ */
+void init_logging(); //__attribute__((constructor));
 std::shared_ptr<spdlog::logger> logger;
 
 #endif

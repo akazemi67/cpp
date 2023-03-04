@@ -1,26 +1,63 @@
-cmake_minimum_required(VERSION 3.22)
-project(GraphicalUI)
+cmake_minimum_required(VERSION 3.5)
 
-set(CMAKE_CXX_STANDARD 20)
+project(QtChatPanel VERSION 0.1 LANGUAGES CXX)
+
+set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOUIC ON)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 COMPONENTS
-        Core
-        Gui
-        Widgets
-        REQUIRED)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
-add_executable(GraphicalUI main.cpp)
-target_link_libraries(GraphicalUI
-        Qt::Core
-        Qt::Gui
-        Qt::Widgets
+set(PROJECT_SOURCES
+        main.cpp
+        chatwindow.cpp
+        chatwindow.h
+        chatwindow.ui
+)
+
+if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
+    qt_add_executable(QtChatPanel
+        MANUAL_FINALIZATION
+        ${PROJECT_SOURCES}
+    )
+# Define target properties for Android with Qt 6 as:
+#    set_property(TARGET QtChatPanel APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
+#                 ${CMAKE_CURRENT_SOURCE_DIR}/android)
+# For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
+else()
+    if(ANDROID)
+        add_library(QtChatPanel SHARED
+            ${PROJECT_SOURCES}
         )
+# Define properties for Android with Qt 5 after find_package() calls as:
+#    set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
+    else()
+        add_executable(QtChatPanel
+            ${PROJECT_SOURCES}
+        )
+    endif()
+endif()
 
-target_include_directories(GraphicalUI PRIVATE ${CMAKE_SOURCE_DIR}/inetui)
+target_include_directories(QtChatPanel PRIVATE ${CMAKE_SOURCE_DIR}/inetui
+        ${CMAKE_SOURCE_DIR}/logging ${CMAKE_SOURCE_DIR}/dataio)
+target_link_libraries(QtChatPanel PRIVATE logging fmt dataio netlib Qt${QT_VERSION_MAJOR}::Widgets)
 
-target_link_libraries(GraphicalUI netlib)
+set_target_properties(QtChatPanel PROPERTIES
+    MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com
+    MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
+    MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+    MACOSX_BUNDLE TRUE
+    WIN32_EXECUTABLE TRUE
+)
 
+install(TARGETS QtChatPanel
+    BUNDLE DESTINATION .
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+if(QT_VERSION_MAJOR EQUAL 6)
+    qt_finalize_executable(QtChatPanel)
+endif()

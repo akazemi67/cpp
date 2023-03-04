@@ -5,8 +5,6 @@
 #include <iostream>
 #include <memory>
 
-void init_logging() ;//__attribute__((constructor));
-
 std::tuple<bool, bool, std::string> parseConfig(){
     bool console = false;
     bool file = false;
