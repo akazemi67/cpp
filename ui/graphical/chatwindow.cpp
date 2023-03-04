@@ -7,10 +7,14 @@ ChatWindow::ChatWindow(QWidget *parent) : QMainWindow(parent)
 {
     ui->setupUi(this);
     ui->lstAllPeers->setContextMenuPolicy(Qt::CustomContextMenu);
+
     connect(ui->lstAllPeers, SIGNAL(customContextMenuRequested(QPoint)),
             this, SLOT(showContextMenu(QPoint)));
+    connect(this, &ChatWindow::bindSignal, this, &ChatWindow::bindSlot);
 
     readPeersInfo();
+    ui->btnSend->setEnabled(false);
+    ui->btnImage->setEnabled(false);
 }
 
 void ChatWindow::showContextMenu(const QPoint &pos)
@@ -86,10 +90,16 @@ void ChatWindow::peerDisconnect(const Peer &peer) {
 }
 
 void ChatWindow::bindSucceeded() {
+    emit bindSignal();
+}
+
+void ChatWindow::bindSlot() {
     networkingOk = true;
     ui->edtPort->setEnabled(false);
     ui->edtName->setEnabled(false);
     ui->btnListen->setEnabled(false);
+    ui->btnSend->setEnabled(true);
+    ui->btnImage->setEnabled(true);
     QMessageBox::information(this, "BindOK", "Listening Succeeded. Waiting for connections.");
 }
 

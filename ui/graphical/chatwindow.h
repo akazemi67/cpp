@@ -25,7 +25,12 @@ public:
     void peerDisconnect(const Peer &peer) override;
     void bindSucceeded() override;
 
+signals:
+    void bindSignal();
+
 private slots:
+    void bindSlot();
+
     void on_btnImage_clicked();
     void on_btnSend_clicked();
     void on_btnListen_clicked();
@@ -36,8 +41,10 @@ private:
     Ui::ChatWindow *ui;
     std::shared_ptr<std::map<std::string, Peer>> peersInfo;
     std::shared_ptr<NetOps> networking;
-    void readPeersInfo();
     bool networkingOk;
+
+    void readPeersInfo();
+
 };
 
 #endif
