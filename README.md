@@ -75,20 +75,95 @@ public:
     std::vector<std::unique_ptr<PeersDataReader>> createDataReadersFromConfig();
 };
 ```
-This code is implemented in the dataio module, and after compilation, a shared library is generated that other modules can link to.
+This code is implemented in the `dataio` module, and after compilation, a shared library is generated that other modules can link to.
 
+For example the `csv/json` readers expect this structure:
+```
+peers.csv:
+professor,127.0.0.1,1245
+moscow,192.168.126.134,1441
+
+peers.json: 
+[
+    {
+        "name": "lisbon",
+        "ip": "10.10.10.10",
+        "port": 1234
+    },
+    {
+        "name": "tokyo",
+        "ip": "192.168.126.150",
+        "port": 2345
+    }
+]
+```
 
 ### Networking Layer 
 
+All the networking functionality is implemented in the `netlib` module and compiled into a shared library that user interfaces can use. 
+Socket creation and handling are implemented using Linux syscalls such as `socket, bind, listen, accept, recv, send`, 
+and messages are serialized using `protobuf`. The definition of proto messages can be found in the `netlib/protos/messages.proto` file.
 
+After a peer connects (or even when we connect to a peer), a C++ thread is created for handling the sending and receiving of messages. 
+Each message contains a header that specifies the type of the message and the length of the message. 
+The size of the header is always `8 bytes`. After that, we try to receive the number of bytes specified in the header 
+and then deserialize the received message into one of the message types defined in the `inetui` module. 
 
+The structure of a message is as follows:
+```
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  |   Type  |               Length                |
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  |                                               |
+  |                    Body                       |
+  |                                               |
+  |                                               |
+  |                                               |
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+```
 
+The creation of the networking object is done using a factory method. This method receives a port that we'd like to listen on 
+and an object that implements the `UiCallbacks` interface. The return value is an object that implements the `NetOps` interface. 
+This way, the networking layer and user interface are completely isolated and can be implemented in any way desired.
 
+Here are the interfaces:
+```
+class UiCallbacks {
+public:
+    virtual void bindSucceeded()=0;
+    virtual void newAuthMessage(std::string peerName, std::unique_ptr<AuthMessage> authMsg)=0;
+    virtual void newTextMessage(std::string peerName, std::unique_ptr<TextMessage> txtMsg)=0;
+    virtual void newImageMessage(std::string peerName, std::unique_ptr<ImageMessage> imgMsg)=0;
+    virtual void peerDisconnected(const std::string peerName)=0;
+    virtual ~UiCallbacks()=default;
+};
 
+class NetOps {
+public:
+    virtual void sendMessage(const std::string &, const Message &)=0;
+    virtual bool connectPeer(const Peer&)=0;
+    virtual void stopListening()=0;
+    virtual ~NetOps() = default;
+};
+```
 
+### Logging Program Events
 
+For program logs, I used `spdlog`, and all logging-related functionality is in the `logging` module. 
+In the `init_logging` procedure, I read the log configuration file to decide where the log file should be stored and whether 
+console logging is enabled or not. In the beginning, I wanted this function to be called automatically when the library is loaded, 
+but then decided to call it manually.
+The configuration file is stored in `/opt/P2pChat/logging.yml` and has the following structure:
+```
+logging:
+  - console:
+  - file:
+    path: /var/log/P2pChat/chat_log.txt
+```
 
-
+Finally, I have a `getLogger` procedure that returns the logger object. Initially, I used a global `extern` variable. 
+However, using the logging module (implemented as a shared library) in all other modules caused collisions. 
+So, I changed it to a method and moved the logger definition out of the `logging.h` file. 
 
 
 
