@@ -165,11 +165,19 @@ Finally, I have a `getLogger` procedure that returns the logger object. Initiall
 However, using the logging module (implemented as a shared library) in all other modules caused collisions. 
 So, I changed it to a method and moved the logger definition out of the `logging.h` file. 
 
+### The User Interface
+I've put the user interface implementations in the `ui` module. 
+In this module, you can find a dummy console application that I used to test network functionality 
+and ensure everything works according to the design.
+Additionally, there's another folder named graphical where I used `Qt6` to implement a complete graphical user interface. 
+I have included a picture of a chat between four individuals as an example of the graphical user interface.
+
+![Chat UI](./images/QtUI.png)
 
 
-### Project Structure
+### The Project Structure
 
-
+Finally, here is a complete diagram of project modules and their connection:
 ```
 +------+      +-------+      +--------+
 |  UI  | ---> | inetui| <--- | netlib |<----+
