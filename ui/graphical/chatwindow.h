@@ -25,17 +25,19 @@ public:
     void newAuthMessage(std::string peerName, std::unique_ptr<AuthMessage> authMsg) override;
     void newTextMessage(std::string peerName, std::unique_ptr<TextMessage> txtMsg) override;
     void newImageMessage(std::string peerName, std::unique_ptr<ImageMessage> imgMsg) override;
-    void peerDisconnect(const std::string peerName) override;
+    void peerDisconnected(const std::string peerName) override;
 
 signals:
     void bindSignal();
     void updateChatSignal(QString peer, QString msg);
     void imageRecvSignal(QString title, const std::vector<uint8_t>&imageData);
+    void removePeerSignal(QString peer);
 
 private slots:
     void bindSlot();
     void updateChatSlot(QString, QString);
     void imageRecvSlot(QString title, const std::vector<uint8_t>&imageData);
+    void removePeerSlot(QString peer);
 
     void on_btnImage_clicked();
     void on_btnSend_clicked();
@@ -52,6 +54,9 @@ private:
 
     void readPeersInfo();
     void updateCurrentPeerChat();
+
+protected:
+    void closeEvent(QCloseEvent *event) override;
 };
 
 #endif

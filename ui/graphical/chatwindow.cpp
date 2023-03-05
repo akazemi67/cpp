@@ -12,6 +12,7 @@ ChatWindow::ChatWindow(QWidget *parent) : QMainWindow(parent)
     connect(this, &ChatWindow::bindSignal, this, &ChatWindow::bindSlot);
     connect(this, &ChatWindow::updateChatSignal, this, &ChatWindow::updateChatSlot);
     connect(this, &ChatWindow::imageRecvSignal, this, &ChatWindow::imageRecvSlot);
+    connect(this, &ChatWindow::removePeerSignal, this, &ChatWindow::removePeerSlot);
     connect(ui->lstAllPeers, &QListWidget::currentItemChanged, this, &ChatWindow::onCurrentItemChanged);
     connect(ui->edtChat, &QLineEdit::returnPressed, this, &ChatWindow::on_btnSend_clicked);
 
@@ -20,6 +21,14 @@ ChatWindow::ChatWindow(QWidget *parent) : QMainWindow(parent)
     ui->btnImage->setEnabled(false);
     ui->edtPort->setText("1337");
     ui->edtName->setText("EliteQt");
+}
+
+void ChatWindow::closeEvent(QCloseEvent *event) {
+    getLogger()->warn("Application is about to exit...");
+    if(networking!= nullptr)
+        networking->stopListening();
+
+    QWidget::closeEvent(event);
 }
 
 void ChatWindow::showContextMenu(const QPoint &pos) {
@@ -128,6 +137,17 @@ void ChatWindow::onCurrentItemChanged(QListWidgetItem *current, QListWidgetItem 
         ui->btnSend->setEnabled(true);
         ui->btnImage->setEnabled(true);
     }
+    auto peer = peersInfo->find(current->text().toStdString());
+    if(peer!=peersInfo->end()){
+        QString title = "Peer: {";
+        title += peer->second.name.c_str();
+        title += ", ";
+        title += peer->second.IPv4.c_str();
+        title += ", ";
+        title += QString::number(peer->second.port);
+        title += "}";
+        this->setWindowTitle(title);
+    }
     updateCurrentPeerChat();
 }
 
@@ -165,9 +185,6 @@ void ChatWindow::newImageMessage(std::string peerName, std::unique_ptr<ImageMess
     emit imageRecvSignal(title, *imgMsg->image);
 }
 
-void ChatWindow::peerDisconnect(const std::string peerName) {
-
-}
 
 void ChatWindow::updateCurrentPeerChat() {
     ui->lstChat->clear();
@@ -186,5 +203,25 @@ void ChatWindow::imageRecvSlot(QString title, const std::vector<uint8_t> &imageD
     imgWidget->setGeometry(this->geometry());
     imgWidget->setWindowTitle(title);
     imgWidget->show();
+}
+
+void ChatWindow::peerDisconnected(const std::string peerName) {
+    getLogger()->warn("Peer {} disconnected. Changing UI and removing its chats.", peerName);
+    emit removePeerSignal(peerName.c_str());
+}
+
+void ChatWindow::removePeerSlot(QString peer) {
+    for(auto i=0; i<ui->lstAllPeers->count(); i++){
+        auto item = ui->lstAllPeers->item(i);
+        if(peer == item->text()){
+            item->setForeground(QBrush(QColor(Qt::black)));
+            break;
+        }
+    }
+    auto it = chatHistory.find(peer);
+    if(it!=chatHistory.end()){
+        chatHistory.erase(it);
+    }
+    updateCurrentPeerChat();
 }
 

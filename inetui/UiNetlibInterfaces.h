@@ -15,7 +15,7 @@ public:
     virtual void newAuthMessage(std::string peerName, std::unique_ptr<AuthMessage> authMsg)=0;
     virtual void newTextMessage(std::string peerName, std::unique_ptr<TextMessage> txtMsg)=0;
     virtual void newImageMessage(std::string peerName, std::unique_ptr<ImageMessage> imgMsg)=0;
-    virtual void peerDisconnect(const std::string peerName)=0;
+    virtual void peerDisconnected(const std::string peerName)=0;
     virtual ~UiCallbacks()=default;
 };
 
@@ -23,7 +23,7 @@ class NetOps {
 public:
     virtual void sendMessage(const std::string &, const Message &)=0;
     virtual bool connectPeer(const Peer&)=0;
-    virtual void disconnect(const Peer&)=0;
+    virtual void stopListening()=0;
     virtual ~NetOps() = default;
 };
 
@@ -56,10 +56,10 @@ public:
 
     void sendMessage(const std::string &peer, const Message& message) override;
     bool connectPeer(const Peer& peer) override;
-    void disconnect(const Peer& peer) override;
+    void stopListening() override;
 };
 
-//TODO: Use factory instead of this method.
+//I wanted to use factory class, but this is somehow factory method (function!) :-)
 std::unique_ptr<NetOps> createNetworking(int port, UiCallbacks *callbacks);
 
 #endif

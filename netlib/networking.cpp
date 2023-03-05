@@ -22,10 +22,6 @@ NetworkCom::NetworkCom(int _localPort, UiCallbacks *_uiCallbacks):
 }
 
 NetworkCom::~NetworkCom(){
-    if(isListeningLocally) {
-        close(localSocket);
-        listenerThread->join();
-    }
 }
 
 void NetworkCom::addNewSocket(const std::string &peerName, int clientSocket) {
@@ -37,8 +33,15 @@ void NetworkCom::addNewSocket(const std::string &peerName, int clientSocket) {
 void NetworkCom::removeSocket(const std::string &peerName) {
     std::unique_lock<std::shared_mutex> lock(openSocketsMutex);
     auto it = openSockets.find(peerName);
-    if(it != openSockets.end())
+    int clientSocket =-1;
+    if(it != openSockets.end()) {
+        clientSocket = it->second;
         openSockets.erase(it);
+    }
+    auto iter = openSocketsToName.find(clientSocket);
+    if(iter!=openSocketsToName.end()){
+        openSocketsToName.erase(iter);
+    }
 }
 
 int NetworkCom::getClientSocket(const std::string &peerName) {
@@ -55,6 +58,22 @@ std::string NetworkCom::getSocketName(int clientSocket) {
     if(it != openSocketsToName.end())
         return it->second;
     return "[INVALID]";
+}
+
+void NetworkCom::stopListening() {
+    std::unique_lock<std::shared_mutex> lock(openSocketsMutex);
+    if(!isListeningLocally) {
+        getLogger()->info("Application is not listening on any ports. Exiting.");
+        return;
+    }
+
+    getLogger()->info("Disconnecting from all peers and shutting down networking.");
+    for (auto &[clientSocket, name]: openSocketsToName) {
+        close(clientSocket);
+    }
+    close(localSocket);
+    isListeningLocally = false;
+    getLogger()->info("Networking stopped!");
 }
 
 void NetworkCom::startListening() {
@@ -92,7 +111,7 @@ void NetworkCom::startListening() {
         int client_sockfd = accept(localSocket, (struct sockaddr *) &client_addr, &client_addr_len);
         if (client_sockfd < 0) {
             getLogger()->error("accept() failed on {}. errno: {}", localPort, errno);
-            continue;
+            break;
         }
         getLogger()->info("Received a new connection. Waiting for AUTH message.");
         new std::thread([this, client_sockfd](){ this->handleConnections(client_sockfd);});
@@ -214,16 +233,16 @@ void NetworkCom::deserializeHandleMessage(int clientSocket,
 }
 
 void NetworkCom::handleConnections(int clientSocket) {
-    //TODO: handle connection close
-    while(true) {
+    bool waitAndReceive = true;
+    while(waitAndReceive) {
         size_t headerSize = MSG_HEADER_LEN;
         std::unique_ptr<uint8_t> headerBuff(new uint8_t[headerSize]);
         ssize_t bytesReceived = recv(clientSocket, headerBuff.get(), headerSize, 0);
         if(bytesReceived == 0)
-            continue;
-        if(bytesReceived < 0) {
+            break;
+        if(bytesReceived <= 0) {
             getLogger()->error("Error in receiving message header. errno: {}", errno);
-            return;
+            break;
         }
 
         MessageHeader msgHeader = getMessageHeader(std::move(headerBuff));
@@ -237,13 +256,19 @@ void NetworkCom::handleConnections(int clientSocket) {
                                  msgBodySize - totalBytesReceived, 0);
             if (bytesReceived <= 0) {
                 getLogger()->error("Error getting message body! errno: {}", errno);
-                return;
+                waitAndReceive = false;
+                break;
             }
             totalBytesReceived += bytesReceived;
         }
 
         deserializeHandleMessage(clientSocket, std::move(messageBuffer), msgHeader);
     }
+
+    auto peerName = getSocketName(clientSocket);
+    getLogger()->warn("Network connection to {} ended.", peerName);
+    removeSocket(peerName);
+    uiCallbacks->peerDisconnected(peerName);
 }
 
 void NetworkCom::sendMessage(const std::string & peerName, const Message& message) {
@@ -279,10 +304,6 @@ bool NetworkCom::connectPeer(const Peer& peer) {
     //Waiting for messages from connected peer
     new std::thread([this, clientSocket](){ this->handleConnections(clientSocket);});
     return true;
-}
-
-void NetworkCom::disconnect(const Peer& peer) {
-
 }
 
 std::unique_ptr<NetOps> createNetworking(int port, UiCallbacks *callbacks) {
