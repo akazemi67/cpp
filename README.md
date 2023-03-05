@@ -28,6 +28,24 @@ Optionally, you may choose to complete the following tasks:
    necessary instructions for building and running the application.
 
 ## My Solution and Code Structure
+### The Project Structure
+Here is a complete diagram of the project modules and their connections. I describe the role of each module in the following sections.
+
+```
++------+      +-------+      +--------+
+|  UI  | ---> | inetui| <--- | netlib |<----+
++------+      +-------+      +--------+     |
+|                                 |         |
+|              +------------------+         |
+|              |                            |
+|         +--------+      +---------+       |
+|         |logging | <--- | dataio  |       |
+|         +--------+      +---------+       |
+|              |               |            |  
++--------------+---------------+------------+
+```
+
+
 ### Common Interfaces and Data Structures
 We need to create a foundation that makes the interaction of different libraries easy and seamless. At a minimum, this module needs to define the following parts:
 * A structure for peers' information, including their name, IP, and port.
@@ -172,27 +190,48 @@ and ensure everything works according to the design.
 Additionally, there's another folder named graphical where I used `Qt6` to implement a complete graphical user interface. 
 I have included a picture of a chat between four individuals as an example of the graphical user interface.
 
-![Chat UI](./images/QtUI.png)
+![Chat UI](./images/QtUi.png)
 
+## Guide to Building and Executing
+I used `cmake` for building and linking the project, and my development environment was `Ubuntu 22.04 LTS`. 
+I used `clion` as IDE, and the project files are also committed. The packages I installed as dependencies
+of the project and for running `Qt Creator` are the followings:
 
-### The Project Structure
-
-Finally, here is a complete diagram of project modules and their connection:
 ```
-+------+      +-------+      +--------+
-|  UI  | ---> | inetui| <--- | netlib |<----+
-+------+      +-------+      +--------+     |
-|                                 |         |
-|              +------------------+         |
-|              |                            |
-|         +--------+      +---------+       |
-|         |logging | <--- | dataio  |       |
-|         +--------+      +---------+       |
-|              |               |            |  
-+--------------+---------------+------------+
+sudo apt install build-essential cmake ninja-build git qt6-base-dev qt6-base-private-dev qt6-declarative-dev 
+qt6-declarative-private-dev qt6-tools-dev qt6-tools-private-dev qt6-scxml-dev qt6-documentation-tools 
+libqt6core5compat6-dev qt6-tools-dev-tools qt6-l10n-tools qt6-shader-baker libqt6shadertools6-dev 
+qt6-quick3d-dev qt6-quick3d-dev-tools libqt6svg6-dev libqt6quicktimeline6-dev libqt6serialport6-dev 
+libgl1-mesa-dev libvulkan-dev libxcb-xinput-dev libxcb-xinerama0-dev libxkbcommon-dev 
+libxkbcommon-x11-dev libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xkb1 libxcb-randr0 libxcb-icccm4 
+libprotobuf-c-dev protobuf-compiler libprotobuf-dev libspdlog-dev libyaml-cpp-dev
+clang-14 libclang-14-dev
 ```
 
+To compile the project, navigate to the project's root directory and execute the following commands in the terminal:
+```
+mkdir build
+cd build
+cmake ..
+make
+```
 
-## How to build
+These commands will create a `build` directory, generate the necessary build files using CMake, and compile the project. 
+The resulting executable file will be located in the build under `ui` directory.
+To run the Qt application, navigate to `build\ui\graphical` directory and execute the following command:
+```
+./QtChatPanel
+```
+Make sure you have installed all the necessary dependencies before compiling and running the project.
+
 
 ## Future Work
+Here is a list of things that can be done in the project or need improvements:
+* Create a better UI :-)
+* Implement a fully functional console UI using `ncurses`
+* Improve exception handling and improve logging of events
+* Refactor serialization/deserialization parts and do them in a more general way (I tried implementing them using templates but had bug, so I ignored it for now)
+* Implement a database version for `data-reader`
+* Implement persistent chat history 
+* Add file transfer functionality (maybe using Qt-Tree)
+* Add audio/video conversations functionality
