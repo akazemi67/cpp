@@ -27,7 +27,74 @@ Optionally, you may choose to complete the following tasks:
 2. Use Git to manage your project and deliver your entire application using GitHub. This includes all source code, documentation, and any
    necessary instructions for building and running the application.
 
-## Source Code Structure
+## My Solution and Code Structure
+### Common Interfaces and Data Structures
+We need to create a foundation that makes the interaction of different libraries easy and seamless. At a minimum, this module needs to define the following parts:
+* A structure for peers' information, including their name, IP, and port.
+* An interface for network operations that different user interfaces (e.g. console, graphical) can use to communicate over the network.
+* A callback interface for updating the user interface based on the received network event (e.g. peer connected, message received, peer disconnected).
+* Supported message types, which abstract message serialization/deserialization in the network layer and enable interaction between different libraries.
+
+To achieve this, I defined the `inetui` module, which consists only of header files and produces no lib/exe files.
+
+### Reading list of peers
+To be able to read a list of peers from a variety of sources and extend the ability to add new ways of data storage and retrieval, 
+I added an interface for reading the list of peers and returning a vector of them. This allows us to implement the interface 
+according to the data model for each storage method, such as JSON, CSV, and databases.
+
+```
+class PeersDataReader {
+public:
+    virtual std::unique_ptr<std::vector<Peer>> readData() = 0;
+    virtual ~PeersDataReader() = default;
+};
+```
+
+Users can select their desired storage method from the supported methods by using a configuration file. 
+For example, I used `/opt/P2pChat/data_sources.json` as the location of the configuration file, and the structure of the file is as follows:
+
+```
+{
+    "data_sources": {
+        "csv": "/opt/P2pChat/peers.csv",
+        "sqlite": "/opt/P2pChat/peers.db",
+        "json": "/opt/P2pChat/peers.json"
+    }
+}
+```
+I also wrote a factory class that reads the configuration file and returns a list of data reader objects. The factory is as follows:
+
+```
+class DataReaderFactory {
+private:
+    std::string configFilePath;
+    std::unique_ptr<PeersDataReader> createDataReader(const std::string& type, const std::string& path);
+public:
+    explicit DataReaderFactory(const std::string &configFilePath);
+
+    std::vector<std::unique_ptr<PeersDataReader>> createDataReadersFromConfig();
+};
+```
+This code is implemented in the dataio module, and after compilation, a shared library is generated that other modules can link to.
+
+
+### Networking Layer 
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Project Structure
+
+
 ```
 +------+      +-------+      +--------+
 |  UI  | ---> | inetui| <--- | netlib |<----+
