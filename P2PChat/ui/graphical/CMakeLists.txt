@@ -25,8 +25,8 @@ set(PROJECT_SOURCES
         chatwindow.ui
         ImageWidget.h)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_SOURCE_DIR}/inetui
-        ${CMAKE_SOURCE_DIR}/logging ${CMAKE_SOURCE_DIR}/dataio)
+include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_SOURCE_DIR}/P2PChat/inetui
+        ${CMAKE_SOURCE_DIR}/P2PChat/logging ${CMAKE_SOURCE_DIR}/P2PChat/dataio)
 
 qt_add_executable(QtChatPanel
         MANUAL_FINALIZATION

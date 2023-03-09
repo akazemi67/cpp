@@ -5,8 +5,8 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_executable(ConsoleUI main.cpp)
 
-target_include_directories(ConsoleUI PRIVATE ${CMAKE_SOURCE_DIR}/inetui
-        ${CMAKE_SOURCE_DIR}/logging ${CMAKE_SOURCE_DIR}/dataio)
+target_include_directories(ConsoleUI PRIVATE ${CMAKE_SOURCE_DIR}/P2PChat/inetui
+        ${CMAKE_SOURCE_DIR}/P2PChat/logging ${CMAKE_SOURCE_DIR}/P2PChat/dataio)
 
 target_link_libraries(ConsoleUI PRIVATE logging fmt dataio netlib)
 
